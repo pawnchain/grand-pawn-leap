@@ -14,16 +14,360 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          status: Database["public"]["Enums"]["coupon_status"]
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          status?: Database["public"]["Enums"]["coupon_status"]
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          status?: Database["public"]["Enums"]["coupon_status"]
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          payout: number
+          price: number
+          referral_bonus: number
+          type: Database["public"]["Enums"]["plan_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          payout: number
+          price: number
+          referral_bonus: number
+          type: Database["public"]["Enums"]["plan_type"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          payout?: number
+          price?: number
+          referral_bonus?: number
+          type?: Database["public"]["Enums"]["plan_type"]
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          referral_code: string
+          referred_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          referral_code: string
+          referred_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          bank_account_number?: string
+          bank_name?: string
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          bonus_amount: number
+          created_at: string | null
+          id: string
+          is_paid: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          bonus_amount: number
+          created_at?: string | null
+          id?: string
+          is_paid?: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          bonus_amount?: number
+          created_at?: string | null
+          id?: string
+          is_paid?: boolean | null
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      triangle_members: {
+        Row: {
+          id: string
+          is_paid_out: boolean | null
+          joined_at: string | null
+          level: number
+          position: number
+          triangle_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_paid_out?: boolean | null
+          joined_at?: string | null
+          level: number
+          position: number
+          triangle_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_paid_out?: boolean | null
+          joined_at?: string | null
+          level?: number
+          position?: number
+          triangle_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triangle_members_triangle_id_fkey"
+            columns: ["triangle_id"]
+            isOneToOne: false
+            referencedRelation: "triangles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "triangle_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      triangles: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_complete: boolean | null
+          parent_triangle_id: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          split_side: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_complete?: boolean | null
+          parent_triangle_id?: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          split_side?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_complete?: boolean | null
+          parent_triangle_id?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          split_side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triangles_parent_triangle_id_fkey"
+            columns: ["parent_triangle_id"]
+            isOneToOne: false
+            referencedRelation: "triangles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          complaint_details: Json | null
+          complaint_submitted: boolean | null
+          completed_at: string | null
+          id: string
+          new_coupon_code: string | null
+          processing_at: string | null
+          referral_bonus: number
+          requested_at: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"]
+          total_amount: number
+          triangle_member_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          complaint_details?: Json | null
+          complaint_submitted?: boolean | null
+          completed_at?: string | null
+          id?: string
+          new_coupon_code?: string | null
+          processing_at?: string | null
+          referral_bonus: number
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          total_amount: number
+          triangle_member_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          complaint_details?: Json | null
+          complaint_submitted?: boolean | null
+          completed_at?: string | null
+          id?: string
+          new_coupon_code?: string | null
+          processing_at?: string | null
+          referral_bonus?: number
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          total_amount?: number
+          triangle_member_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_triangle_member_id_fkey"
+            columns: ["triangle_member_id"]
+            isOneToOne: false
+            referencedRelation: "triangle_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_referral_code: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      coupon_status: "active" | "used"
+      plan_type: "king" | "queen" | "prince" | "princess"
+      withdrawal_status: "pending" | "processing" | "completed" | "not_received"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +494,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      coupon_status: ["active", "used"],
+      plan_type: ["king", "queen", "prince", "princess"],
+      withdrawal_status: ["pending", "processing", "completed", "not_received"],
+    },
   },
 } as const
