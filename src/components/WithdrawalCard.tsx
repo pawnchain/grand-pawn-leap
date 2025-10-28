@@ -15,8 +15,10 @@ export function WithdrawalCard({ userId }: { userId: string }) {
   const [formType, setFormType] = useState<"rejoin" | "complaint" | null>(null);
   const [formData, setFormData] = useState({
     couponCode: "",
+    referralCode: "",
     accountNumber: "",
     accountName: "",
+    bankName: "",
     telegram: "",
     complaint: "",
   });
@@ -101,24 +103,37 @@ export function WithdrawalCard({ userId }: { userId: string }) {
 
     try {
       if (formType === "rejoin") {
-        // Just store the coupon code for rejoin
+        // Store coupon and rejoin triangle
         await supabase
           .from("withdrawals")
           .update({ new_coupon_code: formData.couponCode })
           .eq("id", withdrawal.id);
 
+        // Call edge function to join triangle
+        const { error: joinError } = await supabase.functions.invoke('join-triangle', {
+          body: {
+            userId: userId,
+            planType: withdrawal.plan_type,
+            referralCode: formData.referralCode || null,
+          },
+        });
+
+        if (joinError) throw joinError;
+
         toast({
           title: "Rejoin request submitted!",
-          description: "You'll be added to a new triangle soon.",
+          description: "You've been added to a new triangle.",
         });
       } else if (formType === "complaint") {
         await supabase
           .from("withdrawals")
           .update({
             complaint_submitted: true,
+            telegram_username: formData.telegram,
             complaint_details: {
               account_number: formData.accountNumber,
               account_name: formData.accountName,
+              bank_name: formData.bankName,
               telegram: formData.telegram,
               complaint: formData.complaint,
             },
@@ -233,6 +248,16 @@ export function WithdrawalCard({ userId }: { userId: string }) {
                     className="bg-input"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                  <Input
+                    id="referralCode"
+                    value={formData.referralCode}
+                    onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+                    placeholder="Enter referral code if you have one"
+                    className="bg-input"
+                  />
+                </div>
               </>
             ) : (
               <>
@@ -253,6 +278,16 @@ export function WithdrawalCard({ userId }: { userId: string }) {
                     id="accountName"
                     value={formData.accountName}
                     onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                    required
+                    className="bg-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    value={formData.bankName}
+                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                     required
                     className="bg-input"
                   />

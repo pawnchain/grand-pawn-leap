@@ -17,6 +17,7 @@ export default function Auth() {
     password: "",
     fullName: "",
     couponCode: "",
+    referralCode: "",
     planType: "",
     bankAccountNumber: "",
     bankName: "",
@@ -103,6 +104,7 @@ export default function Auth() {
           bank_name: formData.bankName,
           account_name: formData.accountName,
           referral_code: refCode,
+          referral_code_used: formData.referralCode || null,
         });
 
       if (profileError) throw profileError;
@@ -117,6 +119,19 @@ export default function Auth() {
       await supabase
         .from("user_roles")
         .insert({ user_id: authData.user.id, role: "user" });
+
+      // Join triangle
+      const { error: joinError } = await supabase.functions.invoke('join-triangle', {
+        body: {
+          userId: authData.user.id,
+          planType: formData.planType,
+          referralCode: formData.referralCode || null,
+        },
+      });
+
+      if (joinError) {
+        console.error("Error joining triangle:", joinError);
+      }
 
       toast({
         title: "Registration successful!",
@@ -175,6 +190,17 @@ export default function Auth() {
                     onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
                     required
                     placeholder="Enter your coupon code"
+                    className="bg-input border-border"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                  <Input
+                    id="referralCode"
+                    value={formData.referralCode}
+                    onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+                    placeholder="Enter referral code if you have one"
                     className="bg-input border-border"
                   />
                 </div>

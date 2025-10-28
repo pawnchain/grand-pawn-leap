@@ -136,6 +136,63 @@ export default function Admin() {
     }
   };
 
+  const handleUpdateWithdrawalStatus = async (withdrawalId: string, newStatus: string) => {
+    try {
+      const updateData: any = { status: newStatus };
+      
+      if (newStatus === 'processing') {
+        updateData.processing_at = new Date().toISOString();
+      } else if (newStatus === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("withdrawals")
+        .update(updateData)
+        .eq("id", withdrawalId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status updated",
+        description: `Withdrawal marked as ${newStatus}`,
+      });
+
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleSplitTriangle = async (triangleId: string) => {
+    if (!confirm("Are you sure you want to split this triangle?")) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('split-triangle', {
+        body: { triangleId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Triangle split!",
+        description: "The triangle has been split into two new triangles.",
+      });
+
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
   const exportWithdrawals = () => {
     const csv = [
       ["ID", "User", "Email", "Amount", "Status", "Bank", "Account Number", "Account Name", "Date"],
@@ -350,6 +407,7 @@ export default function Admin() {
                       <TableHead>Status</TableHead>
                       <TableHead>Bank Details</TableHead>
                       <TableHead>Requested</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -377,9 +435,36 @@ export default function Admin() {
                             <p>{withdrawal.profiles?.bank_name}</p>
                             <p className="font-mono">{withdrawal.profiles?.bank_account_number}</p>
                             <p className="text-muted-foreground">{withdrawal.profiles?.account_name}</p>
+                            {withdrawal.telegram_username && (
+                              <p className="text-primary">TG: {withdrawal.telegram_username}</p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>{new Date(withdrawal.requested_at).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-2">
+                            {withdrawal.status === 'pending' && (
+                              <Button
+                                onClick={() => handleUpdateWithdrawalStatus(withdrawal.id, 'processing')}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                Start Processing
+                              </Button>
+                            )}
+                            {withdrawal.status === 'processing' && (
+                              <Button
+                                onClick={() => handleUpdateWithdrawalStatus(withdrawal.id, 'completed')}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                Mark Complete
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

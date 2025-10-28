@@ -92,6 +92,7 @@ export type Database = {
           full_name: string
           id: string
           referral_code: string
+          referral_code_used: string | null
           referred_by: string | null
           updated_at: string | null
         }
@@ -104,6 +105,7 @@ export type Database = {
           full_name: string
           id: string
           referral_code: string
+          referral_code_used?: string | null
           referred_by?: string | null
           updated_at?: string | null
         }
@@ -116,6 +118,7 @@ export type Database = {
           full_name?: string
           id?: string
           referral_code?: string
+          referral_code_used?: string | null
           referred_by?: string | null
           updated_at?: string | null
         }
@@ -298,6 +301,7 @@ export type Database = {
           referral_bonus: number
           requested_at: string | null
           status: Database["public"]["Enums"]["withdrawal_status"]
+          telegram_username: string | null
           total_amount: number
           triangle_member_id: string
           user_id: string
@@ -313,6 +317,7 @@ export type Database = {
           referral_bonus: number
           requested_at?: string | null
           status?: Database["public"]["Enums"]["withdrawal_status"]
+          telegram_username?: string | null
           total_amount: number
           triangle_member_id: string
           user_id: string
@@ -328,6 +333,7 @@ export type Database = {
           referral_bonus?: number
           requested_at?: string | null
           status?: Database["public"]["Enums"]["withdrawal_status"]
+          telegram_username?: string | null
           total_amount?: number
           triangle_member_id?: string
           user_id?: string
