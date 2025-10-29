@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Crown, Plus, Download, Trash2, ArrowLeft } from "lucide-react";
+import { Crown, Plus, Download, Trash2, ArrowLeft, Upload, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Admin() {
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,8 @@ export default function Admin() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [newCoupon, setNewCoupon] = useState({ code: "", planType: "" });
+  const [selectedWithdrawals, setSelectedWithdrawals] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -193,6 +196,105 @@ export default function Admin() {
     }
   };
 
+  const handleBulkImportCoupons = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(line => line.trim());
+      
+      // Skip header if present
+      const startIndex = lines[0].toLowerCase().includes("code") ? 1 : 0;
+      const couponsToImport = [];
+
+      for (let i = startIndex; i < lines.length; i++) {
+        const [code, planType] = lines[i].split(",").map(s => s.trim());
+        if (code && planType) {
+          couponsToImport.push({
+            code,
+            plan_type: planType.toLowerCase(),
+            status: "active" as any,
+          });
+        }
+      }
+
+      const { error } = await supabase
+        .from("coupons")
+        .insert(couponsToImport);
+
+      if (error) throw error;
+
+      toast({
+        title: "Import successful!",
+        description: `${couponsToImport.length} coupons imported.`,
+      });
+
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Import failed",
+        description: error.message,
+      });
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleBulkUpdateWithdrawals = async (newStatus: string) => {
+    if (selectedWithdrawals.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "No selection",
+        description: "Please select withdrawals to update.",
+      });
+      return;
+    }
+
+    try {
+      const updateData: any = { status: newStatus };
+      
+      if (newStatus === 'processing') {
+        updateData.processing_at = new Date().toISOString();
+      } else if (newStatus === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
+      const promises = Array.from(selectedWithdrawals).map(id =>
+        supabase.from("withdrawals").update(updateData).eq("id", id)
+      );
+
+      await Promise.all(promises);
+
+      toast({
+        title: "Bulk update complete!",
+        description: `${selectedWithdrawals.size} withdrawals updated to ${newStatus}.`,
+      });
+
+      setSelectedWithdrawals(new Set());
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const toggleWithdrawalSelection = (id: string) => {
+    const newSelection = new Set(selectedWithdrawals);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedWithdrawals(newSelection);
+  };
+
   const exportWithdrawals = () => {
     const csv = [
       ["ID", "User", "Email", "Amount", "Status", "Bank", "Account Number", "Account Name", "Date"],
@@ -339,10 +441,27 @@ export default function Admin() {
                       </Select>
                     </div>
                   </div>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Coupon
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="bg-primary hover:bg-primary/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Coupon
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Bulk Import CSV
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv"
+                      onChange={handleBulkImportCoupons}
+                      className="hidden"
+                    />
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -393,15 +512,49 @@ export default function Admin() {
                   <CardTitle>Withdrawal Requests</CardTitle>
                   <CardDescription>Process user withdrawal requests</CardDescription>
                 </div>
-                <Button onClick={exportWithdrawals} variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
+                <div className="flex gap-2">
+                  {selectedWithdrawals.size > 0 && (
+                    <>
+                      <Button
+                        onClick={() => handleBulkUpdateWithdrawals('processing')}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Process Selected ({selectedWithdrawals.size})
+                      </Button>
+                      <Button
+                        onClick={() => handleBulkUpdateWithdrawals('completed')}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Complete Selected ({selectedWithdrawals.size})
+                      </Button>
+                    </>
+                  )}
+                  <Button onClick={exportWithdrawals} variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedWithdrawals.size === withdrawals.length && withdrawals.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedWithdrawals(new Set(withdrawals.map(w => w.id)));
+                            } else {
+                              setSelectedWithdrawals(new Set());
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
@@ -413,6 +566,12 @@ export default function Admin() {
                   <TableBody>
                     {withdrawals.map((withdrawal) => (
                       <TableRow key={withdrawal.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedWithdrawals.has(withdrawal.id)}
+                            onCheckedChange={() => toggleWithdrawalSelection(withdrawal.id)}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{withdrawal.profiles?.full_name}</p>

@@ -18,6 +18,27 @@ export function TriangleView({ userId }: { userId: string }) {
 
   useEffect(() => {
     loadTriangle();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('triangle-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'triangle_members',
+        },
+        () => {
+          // Reload triangle when any member changes
+          loadTriangle();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const loadTriangle = async () => {
