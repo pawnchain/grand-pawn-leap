@@ -333,32 +333,33 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-3 sm:p-4 md:p-8 pb-safe">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
           <div className="flex items-center gap-3">
-            <Crown className="w-10 h-10 text-primary animate-float" />
+            <Crown className="w-8 h-8 sm:w-10 sm:h-10 text-primary animate-float" />
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Admin Panel</h1>
-              <p className="text-muted-foreground">Manage users, coupons, and withdrawals</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Panel</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Manage users, coupons, and withdrawals</p>
             </div>
           </div>
           <Button
             onClick={() => navigate("/dashboard")}
             variant="outline"
-            className="border-border/50"
+            size="sm"
+            className="border-border/50 self-start sm:self-auto touch-manipulation"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-card">
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons</TabsTrigger>
-            <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+        <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-card h-auto">
+            <TabsTrigger value="users" className="text-xs sm:text-sm py-2 sm:py-3">Users</TabsTrigger>
+            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2 sm:py-3">Coupons</TabsTrigger>
+            <TabsTrigger value="withdrawals" className="text-xs sm:text-sm py-2 sm:py-3">Withdrawals</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">

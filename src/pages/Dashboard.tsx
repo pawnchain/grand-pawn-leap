@@ -77,23 +77,24 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-3 sm:p-4 md:p-8 pb-safe">
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex justify-between items-center">
+      <div className="max-w-7xl mx-auto mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <Crown className="w-10 h-10 text-primary animate-float" />
+            <Crown className="w-8 h-8 sm:w-10 sm:h-10 text-primary animate-float" />
             <div>
-              <h1 className="text-3xl font-bold text-foreground">PawnEarn Dashboard</h1>
-              <p className="text-muted-foreground">Welcome, {profile?.full_name}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">PawnEarn Dashboard</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Welcome, {profile?.full_name}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {isAdmin && (
               <Button
                 onClick={() => navigate("/admin")}
                 variant="outline"
-                className="border-primary/50 hover:bg-primary/10"
+                size="sm"
+                className="border-primary/50 hover:bg-primary/10 flex-1 sm:flex-none"
               >
                 Admin Panel
               </Button>
@@ -101,7 +102,8 @@ export default function Dashboard() {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="border-destructive/50 hover:bg-destructive/10"
+              size="sm"
+              className="border-destructive/50 hover:bg-destructive/10 flex-1 sm:flex-none"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -111,11 +113,11 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-border/50 bg-card/95 backdrop-blur-sm animate-fade-in">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <Card className="border-border/50 bg-card/95 backdrop-blur-sm animate-fade-in sm:col-span-2 md:col-span-1">
           <CardHeader className="pb-3">
-            <CardDescription className="text-muted-foreground">Referral Code</CardDescription>
-            <CardTitle className="text-2xl font-mono text-primary">
+            <CardDescription className="text-xs sm:text-sm text-muted-foreground">Referral Code</CardDescription>
+            <CardTitle className="text-xl sm:text-2xl font-mono text-primary break-all">
               {profile?.referral_code}
             </CardTitle>
           </CardHeader>
@@ -124,7 +126,7 @@ export default function Dashboard() {
               onClick={copyReferralCode}
               variant="outline"
               size="sm"
-              className="w-full border-primary/50 hover:bg-primary/10"
+              className="w-full border-primary/50 hover:bg-primary/10 touch-manipulation"
             >
               <Copy className="w-4 h-4 mr-2" />
               Copy Code
@@ -164,12 +166,12 @@ export default function Dashboard() {
       </div>
 
       {/* Triangle View */}
-      <div className="max-w-7xl mx-auto mb-8">
+      <div className="max-w-7xl mx-auto mb-6 sm:mb-8">
         <TriangleView userId={profile?.id} />
       </div>
 
       {/* Withdrawal Section */}
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto mb-safe">
         <WithdrawalCard userId={profile?.id} />
       </div>
     </div>
