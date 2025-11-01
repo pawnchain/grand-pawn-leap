@@ -56,6 +56,32 @@ export default function Auth() {
     }
   };
 
+  const handleCouponCheck = async (couponCode: string) => {
+    if (!couponCode.trim()) {
+      setFormData({ ...formData, planType: "" });
+      return;
+    }
+
+    try {
+      const { data: couponData, error: couponError } = await supabase
+        .from("coupons")
+        .select("plan_type")
+        .eq("code", couponCode)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (couponData) {
+        setFormData({ ...formData, couponCode, planType: couponData.plan_type });
+        toast({
+          title: "Coupon valid!",
+          description: `Plan auto-selected: ${couponData.plan_type}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking coupon:", error);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -67,15 +93,10 @@ export default function Auth() {
         .select("*, plans(*)")
         .eq("code", formData.couponCode)
         .eq("status", "active")
-        .single();
+        .maybeSingle();
 
       if (couponError || !couponData) {
         throw new Error("Invalid or used coupon code");
-      }
-
-      // Check if plan matches
-      if (couponData.plan_type !== formData.planType) {
-        throw new Error("Coupon plan doesn't match selected plan");
       }
 
       // Create auth user
@@ -184,7 +205,11 @@ export default function Auth() {
                   <Input
                     id="couponCode"
                     value={formData.couponCode}
-                    onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setFormData({ ...formData, couponCode: code });
+                    }}
+                    onBlur={(e) => handleCouponCheck(e.target.value)}
                     required
                     placeholder="Enter your coupon code"
                     className="bg-input border-border"
@@ -203,14 +228,15 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="planType">Select Plan</Label>
+                  <Label htmlFor="planType">Selected Plan</Label>
                   <Select
                     value={formData.planType}
                     onValueChange={(value) => setFormData({ ...formData, planType: value })}
                     required
+                    disabled={!!formData.planType}
                   >
                     <SelectTrigger className="bg-input border-border">
-                      <SelectValue placeholder="Choose your plan" />
+                      <SelectValue placeholder="Enter coupon to see your plan" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="king">👑 King - ₦100,000</SelectItem>
