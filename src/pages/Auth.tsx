@@ -115,10 +115,7 @@ export default function Auth() {
         .update({ status: "used", used_by: authData.user.id, used_at: new Date().toISOString() })
         .eq("id", couponData.id);
 
-      // Add user role
-      await supabase
-        .from("user_roles")
-        .insert({ user_id: authData.user.id, role: "user" });
+      // User role is automatically created by trigger
 
       // Join triangle
       const { error: joinError } = await supabase.functions.invoke('join-triangle', {
