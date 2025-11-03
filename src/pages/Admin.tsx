@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Crown, Plus, Download, Trash2, ArrowLeft, Upload, Check } from "lucide-react";
+import { Crown, Plus, Download, Trash2, ArrowLeft, Upload, Check, TrendingUp, DollarSign, Package, Activity } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,12 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [triangles, setTriangles] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>({});
   const [newCoupon, setNewCoupon] = useState({ code: "", planType: "" });
+  const [newExpense, setNewExpense] = useState({ description: "", amount: "" });
   const [selectedWithdrawals, setSelectedWithdrawals] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -81,6 +86,69 @@ export default function Admin() {
       .select("*, profiles(full_name, email, bank_account_number, bank_name, account_name)")
       .order("requested_at", { ascending: false });
     setWithdrawals(withdrawalsData || []);
+
+    // Load triangles
+    const { data: trianglesData } = await supabase
+      .from("triangles")
+      .select("*, triangle_members(user_id, level, position)")
+      .order("created_at", { ascending: false });
+    setTriangles(trianglesData || []);
+
+    // Load plans
+    const { data: plansData } = await supabase
+      .from("plans")
+      .select("*");
+    setPlans(plansData || []);
+
+    // Load expenses (we'll create this table if needed)
+    const { data: expensesData } = await supabase
+      .from("expenses")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setExpenses(expensesData || []);
+
+    // Calculate analytics
+    calculateAnalytics(trianglesData || [], couponsData || [], withdrawalsData || [], plansData || [], expensesData || []);
+  };
+
+  const calculateAnalytics = (trianglesData: any[], couponsData: any[], withdrawalsData: any[], plansData: any[], expensesData: any[]) => {
+    // Triangle statistics per plan
+    const triangleStats: any = {};
+    ['king', 'queen', 'prince', 'princess'].forEach(planType => {
+      const planTriangles = trianglesData.filter(t => t.plan_type === planType);
+      triangleStats[planType] = {
+        total: planTriangles.length,
+        completed: planTriangles.filter(t => t.is_complete).length,
+        open: planTriangles.filter(t => !t.is_complete && t.is_active).length,
+      };
+    });
+
+    // Financial calculations
+    const usedCoupons = couponsData.filter(c => c.used_by !== null);
+    const totalCouponValue = usedCoupons.reduce((sum, coupon) => {
+      const plan = plansData.find(p => p.type === coupon.plan_type);
+      return sum + (plan?.price || 0);
+    }, 0);
+
+    const totalPayouts = withdrawalsData
+      .filter(w => w.status === 'completed')
+      .reduce((sum, w) => sum + Number(w.total_amount), 0);
+
+    const totalExpenses = expensesData.reduce((sum, e) => sum + Number(e.amount), 0);
+
+    const revenue = totalCouponValue;
+    const totalCosts = totalPayouts + totalExpenses;
+    const netProfitLoss = revenue - totalCosts;
+
+    setAnalytics({
+      triangleStats,
+      usedCouponsCount: usedCoupons.length,
+      totalCouponValue,
+      totalPayouts,
+      totalExpenses,
+      revenue,
+      netProfitLoss,
+    });
   };
 
   const handleAddCoupon = async (e: React.FormEvent) => {
@@ -324,6 +392,61 @@ export default function Admin() {
     });
   };
 
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { error } = await supabase
+        .from("expenses")
+        .insert([{
+          description: newExpense.description,
+          amount: parseFloat(newExpense.amount),
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Expense added!",
+        description: "New expense has been recorded.",
+      });
+
+      setNewExpense({ description: "", amount: "" });
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("expenses")
+        .delete()
+        .eq("id", expenseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Expense deleted",
+        description: "Expense has been removed.",
+      });
+
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -355,12 +478,152 @@ export default function Admin() {
           </Button>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-card h-auto">
+        <Tabs defaultValue="analytics" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-card h-auto">
+            <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 sm:py-3">Analytics</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2 sm:py-3">Users</TabsTrigger>
             <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2 sm:py-3">Coupons</TabsTrigger>
             <TabsTrigger value="withdrawals" className="text-xs sm:text-sm py-2 sm:py-3">Withdrawals</TabsTrigger>
+            <TabsTrigger value="expenses" className="text-xs sm:text-sm py-2 sm:py-3">Expenses</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics" className="space-y-4">
+            {/* Financial Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border-border/50 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Revenue</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <p className="text-2xl font-bold text-green-500">₦{analytics.revenue?.toLocaleString() || 0}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{analytics.usedCouponsCount || 0} coupons used</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Payouts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-red-500" />
+                    <p className="text-2xl font-bold text-red-500">₦{analytics.totalPayouts?.toLocaleString() || 0}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Completed withdrawals</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Expenses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-orange-500" />
+                    <p className="text-2xl font-bold text-orange-500">₦{analytics.totalExpenses?.toLocaleString() || 0}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Operational costs</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit/Loss</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    <p className={`text-2xl font-bold ${(analytics.netProfitLoss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      ₦{analytics.netProfitLoss?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(analytics.netProfitLoss || 0) >= 0 ? 'Profit' : 'Loss'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Triangle Statistics */}
+            <Card className="border-border/50 bg-card/95">
+              <CardHeader>
+                <CardTitle>Triangle Statistics by Plan</CardTitle>
+                <CardDescription>Overview of all triangles across different plans</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {['king', 'queen', 'prince', 'princess'].map(planType => (
+                    <div key={planType} className="p-4 border border-border/50 rounded-lg">
+                      <h3 className="text-lg font-semibold capitalize mb-3 text-primary">{planType}</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Total:</span>
+                          <span className="font-bold">{analytics.triangleStats?.[planType]?.total || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Completed:</span>
+                          <span className="font-bold text-green-500">{analytics.triangleStats?.[planType]?.completed || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Open:</span>
+                          <span className="font-bold text-blue-500">{analytics.triangleStats?.[planType]?.open || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Triangles List */}
+            <Card className="border-border/50 bg-card/95">
+              <CardHeader>
+                <CardTitle>All Triangles</CardTitle>
+                <CardDescription>Complete list of triangles in the system</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Members</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {triangles.map((triangle) => (
+                      <TableRow key={triangle.id}>
+                        <TableCell className="font-mono text-xs">{triangle.id.slice(0, 8)}...</TableCell>
+                        <TableCell className="capitalize font-medium">{triangle.plan_type}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            triangle.is_complete 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : triangle.is_active
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {triangle.is_complete ? 'Completed' : triangle.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </TableCell>
+                        <TableCell>{triangle.triangle_members?.length || 0}/7</TableCell>
+                        <TableCell>{new Date(triangle.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {triangle.completed_at ? new Date(triangle.completed_at).toLocaleDateString() : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <Card className="border-border/50 bg-card/95">
@@ -624,6 +887,86 @@ export default function Admin() {
                               </Button>
                             )}
                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-4">
+            <Card className="border-border/50 bg-card/95">
+              <CardHeader>
+                <CardTitle>Add New Expense</CardTitle>
+                <CardDescription>Track operational costs and expenses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddExpense} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        value={newExpense.description}
+                        onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                        required
+                        placeholder="Server costs, marketing, etc."
+                        className="bg-input"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amount">Amount (₦)</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={newExpense.amount}
+                        onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                        required
+                        placeholder="5000"
+                        className="bg-input"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="bg-primary hover:bg-primary/90">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Expense
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 bg-card/95">
+              <CardHeader>
+                <CardTitle>Expense History</CardTitle>
+                <CardDescription>Total Expenses: ₦{analytics.totalExpenses?.toLocaleString() || 0}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="font-medium">{expense.description}</TableCell>
+                        <TableCell className="font-bold text-orange-500">₦{Number(expense.amount).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(expense.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button
+                            onClick={() => handleDeleteExpense(expense.id)}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
