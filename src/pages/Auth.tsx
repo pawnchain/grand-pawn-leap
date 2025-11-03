@@ -135,6 +135,23 @@ export default function Auth() {
 
       if (profileError) throw profileError;
 
+      // Determine user role (first user is admin, others are regular users)
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      
+      const userRole = count === 1 ? "admin" : "user";
+
+      // Create user role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: authData.user.id,
+          role: userRole,
+        });
+
+      if (roleError) throw roleError;
+
       // Mark coupon as used
       await supabase
         .from("coupons")
