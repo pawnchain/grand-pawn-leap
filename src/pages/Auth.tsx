@@ -90,13 +90,18 @@ export default function Auth() {
       // Validate coupon code first
       const { data: couponData, error: couponError } = await supabase
         .from("coupons")
-        .select("*, plans(*)")
+        .select("*")
         .eq("code", formData.couponCode)
         .eq("status", "active")
         .maybeSingle();
 
       if (couponError || !couponData) {
         throw new Error("Invalid or used coupon code");
+      }
+
+      // Check if plan matches
+      if (couponData.plan_type !== formData.planType) {
+        throw new Error("Coupon plan doesn't match selected plan");
       }
 
       // Create auth user
