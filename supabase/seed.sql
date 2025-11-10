@@ -9,5 +9,6 @@ INSERT INTO public.plans (type, name, price, payout, referral_bonus) VALUES
   ('king', 'King', 20000.00, 80000.00, 2000.00)
 ON CONFLICT (type) DO NOTHING;
 
--- Note: Admin user creation is handled automatically by the handle_new_user() trigger
--- The first user to sign up will automatically be assigned the 'admin' role
+-- Note: Default admin user is automatically created by the initialize-system edge function
+-- on first app load with credentials: admin@pawnearn.com / Admin@123456
+-- User should change the password immediately after first login
